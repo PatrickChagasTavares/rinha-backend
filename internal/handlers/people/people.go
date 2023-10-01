@@ -6,9 +6,8 @@ import (
 )
 
 func New(router httpRouter.Router, ctrl *controllers.Container) {
-
 	router.Post("/pessoas", ctrl.People.Create)
-	// router.Get("/pessoas", nil)
-	// router.Get("/pessoas/:id", nil)
-	// router.Get("/contagem-pessoas", nil)
+	router.Get("/pessoas", ctrl.People.Find)
+	router.Get("/pessoas/:id", ctrl.People.FindByID)
+	router.Get("/contagem-pessoas", ctrl.People.Count)
 }

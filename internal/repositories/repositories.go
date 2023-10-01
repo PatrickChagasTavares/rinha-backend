@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"github.com/jmoiron/sqlx"
+	"github.com/patrickchagastavares/rinha-backend/internal/repositories/database/people"
 	"github.com/patrickchagastavares/rinha-backend/pkg/logger"
 )
 
@@ -12,7 +13,7 @@ type (
 	}
 
 	SqlContainer struct {
-
+		People people.IRepository
 	}
 
 	// Options struct of options to create a new repositories
@@ -27,7 +28,7 @@ type (
 func New(opts Options) *Container {
 	return &Container{
 		Database: SqlContainer{
-
+			People: people.NewSqlx(opts.Log, opts.WriterSqlx, opts.ReaderSqlx),
 		},
 	}
 }

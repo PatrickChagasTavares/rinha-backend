@@ -1,0 +1,150 @@
+definitions:
+  github_com_patrickchagastavares_rinha-backend_internal_entities.HttpErr:
+    properties:
+      http_code:
+        type: integer
+      message:
+        type: string
+    type: object
+  github_com_patrickchagastavares_rinha-backend_internal_entities.Person:
+    properties:
+      apelido:
+        type: string
+      id:
+        type: string
+      nascimento:
+        type: string
+      nome:
+        type: string
+      stack:
+        items:
+          type: string
+        type: array
+    type: object
+  github_com_patrickchagastavares_rinha-backend_internal_entities.PersonRequest:
+    properties:
+      apelido:
+        maxLength: 32
+        type: string
+      nascimento:
+        type: string
+      nome:
+        maxLength: 100
+        type: string
+      stack:
+        items:
+          type: string
+        type: array
+    required:
+    - apelido
+    - nascimento
+    - nome
+    type: object
+info:
+  contact: {}
+paths:
+  /contagem-pessoas:
+    get:
+      consumes:
+      - application/json
+      description: find one person
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "500":
+          description: Internal Server Error
+      tags:
+      - people
+  /pessoas:
+    get:
+      consumes:
+      - application/json
+      description: find one person
+      parameters:
+      - description: search
+        in: query
+        name: t
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_patrickchagastavares_rinha-backend_internal_entities.Person'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_patrickchagastavares_rinha-backend_internal_entities.HttpErr'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_patrickchagastavares_rinha-backend_internal_entities.HttpErr'
+        "500":
+          description: Internal Server Error
+      tags:
+      - people
+    post:
+      consumes:
+      - application/json
+      description: Create one person
+      parameters:
+      - description: create new person
+        in: body
+        name: house
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_patrickchagastavares_rinha-backend_internal_entities.PersonRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_patrickchagastavares_rinha-backend_internal_entities.Person'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_patrickchagastavares_rinha-backend_internal_entities.HttpErr'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_patrickchagastavares_rinha-backend_internal_entities.HttpErr'
+        "500":
+          description: Internal Server Error
+      tags:
+      - people
+  /pessoas/:id:
+    get:
+      consumes:
+      - application/json
+      description: find one person
+      parameters:
+      - description: person id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_patrickchagastavares_rinha-backend_internal_entities.Person'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_patrickchagastavares_rinha-backend_internal_entities.HttpErr'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_patrickchagastavares_rinha-backend_internal_entities.HttpErr'
+        "500":
+          description: Internal Server Error
+      tags:
+      - people
+swagger: "2.0"

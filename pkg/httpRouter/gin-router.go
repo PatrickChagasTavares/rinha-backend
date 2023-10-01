@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/PatrickChagastavares/game-of-thrones/pkg/validator"
 	"github.com/gin-gonic/gin"
+	"github.com/patrickchagastavares/rinha-backend/pkg/validator"
 )
 
 type (
@@ -13,8 +13,6 @@ type (
 		router *gin.Engine
 	}
 )
-
-
 
 func NewGinRouter() Router {
 	router := gin.Default()
@@ -35,7 +33,6 @@ func setContentType(contentType string) func(ctx *gin.Context) {
 		ctx.Next()
 	}
 }
-
 
 func (r *ginRouter) Get(path string, f HandlerFunc) {
 	r.router.GET(path, func(ctx *gin.Context) {
@@ -89,6 +86,15 @@ func newGinContext(ctx *gin.Context) Context {
 
 func (c *ginContext) Context() context.Context {
 	return c.r.Request.Context()
+}
+
+func (c *ginContext) SetHeader(key, value string) {
+	c.r.Header(key, value)
+}
+
+func (c *ginContext) String(statusCode int, value string) {
+	c.r.Header("Content-Type", "text/plain")
+	c.r.String(statusCode, value)
 }
 
 func (c *ginContext) JSON(statusCode int, data any) {

@@ -1,0 +1,28 @@
+version: '3.7'
+
+services:
+  db:
+    image: postgres:14
+    restart: always
+    networks:
+      - dbnetwork
+    environment:
+      POSTGRES_DB: rinhabackend
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5432:5432'
+
+  adminer:
+    image: adminer
+    restart: always
+    networks:
+      - dbnetwork
+    links:
+      - db
+    ports:
+      - 8080:8080
+
+networks:
+  dbnetwork:
+
