@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 )
 
 func RunMigrations(dbURL string) {
@@ -21,7 +22,7 @@ func getMigration(dbURL string) *migrate.Migrate {
 	if os.Getenv("env") == "local" {
 		dir = strings.SplitAfter(dir, "rinha-backend")[0]
 	}
-	fmt.Println(dbURL)
+
 	m, err := migrate.New(
 		fmt.Sprintf("file://%s/migrations", dir),
 		dbURL,

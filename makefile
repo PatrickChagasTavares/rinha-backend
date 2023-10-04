@@ -1,5 +1,9 @@
 .PHONY: setup build docker-up docker-down up-local down-local run-gin run-echo docs mocks migration-create migration-up migration-down
 
+DATABASE_CONNECT="postgres://postgres:postgres@127.0.0.1:5432/game-of-thrones?sslmode=disable"
+MIGRATION_SOURCE="file://migrations"
+NAME_IMAGE = "rinha-backend"
+
 setup:
 	@echo "installing swaggo..."
 	@go install github.com/swaggo/swag/cmd/swag@latest
@@ -31,14 +35,11 @@ down-local:
 	@docker compose -f "docker/db/docker-compose.yml" down
 	@docker compose -f "docker/observability/docker-compose.yml" down
 
-run-gin:
-	env=local go run cmd/rinha-gin/main.go
-
-run-echo:
-	env=local go run cmd/rinha-echo/main.go
+run:
+	env=local go run cmd/main.go
 
 docs:
-	@swag init --parseDependency -g cmd/rinha-gin/main.go
+	@swag init --parseDependency -g cmd/main.go
 
 mocks:
 	@go generate ./... 

@@ -3,6 +3,7 @@ package httpRouter
 import (
 	"context"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/patrickchagastavares/rinha-backend/pkg/validator"
@@ -15,11 +16,14 @@ type (
 )
 
 func NewGinRouter() Router {
+	if os.Getenv("env") != "local" {
+		gin.SetMode(gin.ReleaseMode)
+	}
 	router := gin.Default()
-
 	router.Use(
 		// Set the content type default = application/json
 		setContentType("application/json"),
+		gin.Recovery(),
 	)
 
 	return &ginRouter{

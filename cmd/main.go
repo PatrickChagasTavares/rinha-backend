@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/jmoiron/sqlx"
@@ -11,7 +12,7 @@ import (
 	"github.com/patrickchagastavares/rinha-backend/internal/services"
 	"github.com/patrickchagastavares/rinha-backend/pkg/httpRouter"
 	"github.com/patrickchagastavares/rinha-backend/pkg/logger"
-	migration "github.com/patrickchagastavares/rinha-backend/pkg/migrations"
+	"github.com/patrickchagastavares/rinha-backend/pkg/migration"
 
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -21,10 +22,10 @@ func main() {
 	godotenv.Load(".env")
 
 	migration.RunMigrations(os.Getenv("DATABASE_WRITE_URL"))
+	fmt.Println("os.Getenv(DATABASE_WRITE_URL) -> ", os.Getenv("DATABASE_WRITE_URL"))
 
 	var (
 		log          = logger.NewLogrusLogger()
-		router       = httpRouter.NewGinRouter()
 		repositories = repositories.New(repositories.Options{
 			WriterSqlx: sqlx.MustConnect("postgres", os.Getenv("DATABASE_WRITE_URL")),
 			ReaderSqlx: sqlx.MustConnect("postgres", os.Getenv("DATABASE_READ_URL")),
@@ -38,6 +39,7 @@ func main() {
 			Srv: services,
 			Log: log,
 		})
+		router = httpRouter.NewGinRouter()
 	)
 
 	handlers.NewRouter(handlers.Options{
