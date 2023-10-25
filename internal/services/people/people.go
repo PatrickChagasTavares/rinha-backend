@@ -27,18 +27,13 @@ func New(repo *repositories.Container, log logger.Logger) IService {
 }
 
 func (srv *services) Create(ctx context.Context, person entities.PersonRequest) (string, error) {
-	nicknameUsed, err := srv.repositories.Database.People.FindNickNameExist(ctx, person.NickName)
-	if err != nil {
-		return "", err
-	}
-
-	if nicknameUsed {
-		return "", ErrNicknameAlreadyUsed
-	}
-
 	person.PreSave()
 
-	if err := srv.repositories.Database.People.Create(ctx, person); err != nil {
+	err := srv.repositories.Database.People.Create(ctx, person)
+	if err != nil {
+		if srv.repositories.Database.People.IsErrDuplicate(err) {
+			return "", ErrNicknameAlreadyUsed
+		}
 		return "", err
 	}
 

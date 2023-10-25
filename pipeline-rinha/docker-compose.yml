@@ -1,0 +1,90 @@
+version: '3.7'
+
+networks:
+  dbnetwork:
+
+services:
+  db:
+    image: postgres
+    hostname: db
+    restart: always
+    networks:
+      - dbnetwork
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: rinhabackend
+    ports:
+      - '5432:5432'
+    volumes:
+      - ./scripts/ddl.sql:/docker-entrypoint-initdb.d/ddl.sql
+    deploy:
+      resources:
+        limits:
+          cpus: "0.9"
+          memory: "1.5GB"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 15s
+      timeout: 25s
+
+  application1:
+    image: patrickchagas/rinha-backend-api:1.0
+    hostname: application1
+    restart: always
+    networks:
+      - dbnetwork
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - env=production
+      - PORT=:8000
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/rinhabackend?sslmode=disable&pool_min_conns=0&pool_max_conns=100
+    expose:
+      - "8000"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: "0.5GB"
+  
+  application2:
+    image: patrickchagas/rinha-backend-api:1.0
+    hostname: application2
+    restart: always
+    networks:
+      - dbnetwork
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - env=production
+      - PORT=:8000
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/rinhabackend?sslmode=disable&pool_min_conns=0&pool_max_conns=100
+    expose:
+      - "8000"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: "0.5GB"
+  
+  nginx:
+    image: nginx
+    hostname: api
+    networks:
+      - dbnetwork
+    volumes:
+      - ./scripts/nginx/:/etc/nginx/
+    depends_on:
+      - application1
+      - application2
+    ports:
+      - "9999:9999"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: "0.5GB"
+

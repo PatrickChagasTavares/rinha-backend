@@ -1,10 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
 	"github.com/patrickchagastavares/rinha-backend/internal/controllers"
 	"github.com/patrickchagastavares/rinha-backend/internal/handlers"
@@ -12,24 +10,16 @@ import (
 	"github.com/patrickchagastavares/rinha-backend/internal/services"
 	"github.com/patrickchagastavares/rinha-backend/pkg/httpRouter"
 	"github.com/patrickchagastavares/rinha-backend/pkg/logger"
-	"github.com/patrickchagastavares/rinha-backend/pkg/migration"
-
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 func main() {
 	godotenv.Load(".env")
 
-	migration.RunMigrations(os.Getenv("DATABASE_WRITE_URL"))
-	fmt.Println("os.Getenv(DATABASE_WRITE_URL) -> ", os.Getenv("DATABASE_WRITE_URL"))
-
 	var (
 		log          = logger.NewLogrusLogger()
 		repositories = repositories.New(repositories.Options{
-			WriterSqlx: sqlx.MustConnect("postgres", os.Getenv("DATABASE_WRITE_URL")),
-			ReaderSqlx: sqlx.MustConnect("postgres", os.Getenv("DATABASE_READ_URL")),
-			Log:        log,
+			DB_URL: os.Getenv("DATABASE_URL"),
+			Log:    log,
 		})
 		services = services.New(services.Options{
 			Repo: repositories,
@@ -47,8 +37,12 @@ func main() {
 		Ctrl:   controllers,
 	})
 
-	log.Info("start serve in port:", os.Getenv("PORT"))
-	if err := router.Server(os.Getenv("PORT")); err != nil {
+	port := os.Getenv("PORT")
+	if len(port) == 0 {
+		port = ":8000"
+	}
+	log.Info("start serve in port:", port)
+	if err := router.Server(port); err != nil {
 		log.Fatal(err)
 	}
 

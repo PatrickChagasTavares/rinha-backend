@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"strings"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/patrickchagastavares/rinha-backend/internal/entities"
@@ -12,48 +11,24 @@ import (
 )
 
 type repoSqlx struct {
-	log    logger.Logger
-	writer *sqlx.DB
-	reader *sqlx.DB
+	log logger.Logger
+	db  *sqlx.DB
 }
 
-var (
-	createPersonQuery = `INSERT INTO people 
-		(id, name, nick_name, birth_date, stack, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6);`
-
-	findByIdQuery = `
-	SELECT id, name, nick_name, birth_date, stack
-	FROM people
-	WHERE id = $1;`
-
-	nicknameExistQuery = `SELECT EXISTS (SELECT true FROM people WHERE nick_name=$1);`
-
-	findBySearchQuery = `
-	SELECT id, name, nick_name, birth_date, stack
-	FROM people
-	WHERE fts_tokens @@ to_tsquery(unaccent($1)) LIMIT 50;`
-
-	countQuery = `SELECT count(*) AS count FROM people;`
-
-	// Err
-	errNotFound    = errors.New("person is not found or deleted")
-	errQueryCreate = errors.New("problem to create person")
-	errQueryFindId = errors.New("failed to found person")
-	errQueryFind   = errors.New("problem to find people")
-	errQueryCount  = errors.New("problem to count people")
-)
-
-func NewSqlx(log logger.Logger, writer, reader *sqlx.DB) IRepository {
-	return &repoSqlx{log: log, writer: writer, reader: reader}
+func NewSqlx(log logger.Logger, db *sqlx.DB) IRepository {
+	return &repoSqlx{log: log, db: db}
 }
 
 func (repo *repoSqlx) Create(ctx context.Context, person entities.PersonRequest) (err error) {
-	_, err = repo.writer.ExecContext(
+	_, err = repo.db.ExecContext(
 		ctx, createPersonQuery,
 		person.ID, person.Name, person.NickName,
-		person.BirthDate, person.Stack, person.CreatedAt)
+		person.BirthDate, person.StackDB, person.SearchStr(), person.CreatedAt)
 	if err != nil {
+		if repo.validDuplicate(err) {
+			err = errNickNameQueryCreate
+			return
+		}
 		repo.log.ErrorContext(ctx, "people.SqlxRepo.Create data: ", person, ", err: "+err.Error())
 		err = errQueryCreate
 		return
@@ -62,19 +37,8 @@ func (repo *repoSqlx) Create(ctx context.Context, person entities.PersonRequest)
 	return nil
 }
 
-func (repo *repoSqlx) FindNickNameExist(ctx context.Context, nickName string) (exists bool, err error) {
-	err = repo.reader.GetContext(ctx, &exists, nicknameExistQuery, nickName)
-	if err != nil {
-		repo.log.ErrorContext(ctx, "people.SqlxRepo.FindNickNameExist nick_name: "+nickName+", err: "+err.Error())
-		err = errNotFound
-		return
-	}
-
-	return exists, nil
-}
-
 func (repo *repoSqlx) FindByID(ctx context.Context, id string) (person entities.Person, err error) {
-	err = repo.reader.GetContext(ctx, &person, findByIdQuery, id)
+	err = repo.db.GetContext(ctx, &person, findByIdQuery, id)
 	if err != nil {
 		repo.log.ErrorContext(ctx, "people.SqlxRepo.FindByID id: "+id+", err: "+err.Error())
 		if err == sql.ErrNoRows {
@@ -85,24 +49,29 @@ func (repo *repoSqlx) FindByID(ctx context.Context, id string) (person entities.
 		return
 	}
 
+	person.ConvertStackDB()
 	return
 }
 
 func (repo *repoSqlx) FindBySearch(ctx context.Context, query string) (people []entities.Person, err error) {
 	people = make([]entities.Person, 0, 50)
 	query = makeQueryTsvector(query)
-	err = repo.reader.SelectContext(ctx, &people, findBySearchQuery, query)
+	err = repo.db.SelectContext(ctx, &people, findBySearchQuery, query)
 	if err != nil && err != sql.ErrNoRows {
 		repo.log.ErrorContext(ctx, "people.SqlxRepo.FindBySearch query: "+query+", err: "+err.Error())
 		err = errQueryFind
 		return
 	}
 
+	for idx := range people {
+		people[idx].ConvertStackDB()
+	}
+
 	return people, nil
 }
 
 func (repo *repoSqlx) Count(ctx context.Context) (count uint, err error) {
-	err = repo.reader.GetContext(ctx, &count, countQuery)
+	err = repo.db.GetContext(ctx, &count, countQuery)
 	if err != nil {
 		repo.log.ErrorContext(ctx, "people.SqlxRepo.Count err: ", err.Error())
 		err = errQueryCount
@@ -116,15 +85,10 @@ func (repo *repoSqlx) IsErrNotFound(err error) bool {
 	return errors.Is(err, err)
 }
 
-func makeQueryTsvector(q string) string {
-	var query strings.Builder
-	qSplit := strings.Split(q, " ")
-	for idx := range qSplit {
-		if len(qSplit)-1 == idx {
-			query.WriteString(qSplit[idx] + ":*")
-			continue
-		}
-		query.WriteString(qSplit[idx] + ":* & ")
-	}
-	return query.String()
+func (repo *repoSqlx) IsErrDuplicate(err error) bool {
+	return errors.Is(err, errNickNameQueryCreate)
+}
+
+func (repo *repoSqlx) validDuplicate(err error) bool {
+	return err.Error() == "pq: duplicate key value violates unique constraint \"people_nick_name_key\""
 }
