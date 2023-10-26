@@ -1,93 +1,28 @@
 version: '3.7'
 
-networks:
-  dbnetwork:
-    driver: bridge
-
 services:
   db:
-    image: postgres
-    hostname: db
+    image: postgres:14
     restart: always
     networks:
       - dbnetwork
     environment:
-      POSTGRES_USER: rinha
+      POSTGRES_DB: rinhabackend
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: rinha-backend
     ports:
       - '5432:5432'
-    expose:
-      - "5432"
-    deploy:
-      resources:
-        limits:
-          cpus: "0.95"
-          memory: "1.5GB"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 15s
-      timeout: 25s
 
-  application1:
-    image: rinha-backend:latest
-    hostname: application1
+  adminer:
+    image: adminer
     restart: always
     networks:
       - dbnetwork
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      - env=production
-      - PORT=:8000
-      - DATABASE_WRITE_URL=postgres://rinha:postgres@db:5432/rinha-backend?sslmode=disable
-      - DATABASE_READ_URL=postgres://rinha:postgres@db:5432/rinha-backend?sslmode=disable
-    expose:
-      - "8000"
-    deploy:
-      resources:
-        limits:
-          cpus: "0.2"
-          memory: "0.5GB"
-  
-  application2:
-    image: rinha-backend:latest
-    hostname: application2
-    restart: always
-    networks:
-      - dbnetwork
-    depends_on:
-      - application1
+    links:
       - db
-    environment:
-      - env=production
-      - PORT=:8000
-      - DATABASE_WRITE_URL=postgres://rinha:postgres@db:5432/rinha-backend?sslmode=disable
-      - DATABASE_READ_URL=postgres://rinha:postgres@db:5432/rinha-backend?sslmode=disable
-    expose:
-      - "8000"
-    deploy:
-      resources:
-        limits:
-          cpus: "0.2"
-          memory: "0.5GB"
-  
-  nginx:
-    image: nginx
-    hostname: api
-    networks:
-      - dbnetwork
-    volumes:
-      - ./scripts/nginx/:/etc/nginx/
-    depends_on:
-      - application1
-      - application2
     ports:
-      - "9999:9999"
-    deploy:
-      resources:
-        limits:
-          cpus: "0.25"
-          memory: "0.5GB"
+      - 8080:8080
+
+networks:
+  dbnetwork:
 
