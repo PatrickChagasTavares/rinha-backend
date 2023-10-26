@@ -1,11 +1,13 @@
 package people
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/patrickchagastavares/rinha-backend/internal/entities"
 	"github.com/patrickchagastavares/rinha-backend/internal/services"
+	"github.com/patrickchagastavares/rinha-backend/internal/services/people"
 	"github.com/patrickchagastavares/rinha-backend/pkg/httpRouter"
 	"github.com/patrickchagastavares/rinha-backend/pkg/logger"
 )
@@ -54,25 +56,22 @@ func (ctrl *controllers) Create(c httpRouter.Context) {
 		return
 	}
 
-	c.SetHeader("Location", "/pessoas/1")
-	c.JSON(http.StatusCreated, nil)
+	id, err := ctrl.srv.People.Create(c.Context(), newPerson)
+	if err != nil {
+		if errors.Is(err, people.ErrNicknameAlreadyUsed) {
+			c.JSON(
+				http.StatusUnprocessableEntity,
+				entities.NewHttpErr(http.StatusUnprocessableEntity, err.Error(), nil))
+			return
+		}
 
-	// id, err := ctrl.srv.People.Create(c.Context(), newPerson)
-	// if err != nil {
-	// 	if errors.Is(err, people.ErrNicknameAlreadyUsed) {
-	// 		c.JSON(
-	// 			http.StatusUnprocessableEntity,
-	// 			entities.NewHttpErr(http.StatusUnprocessableEntity, err.Error(), nil))
-	// 		return
-	// 	}
-
-	// 	c.JSON(http.StatusInternalServerError, nil)
-	// 	return
-	// }
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
 
 	// // newPerson.ID = id
-	// c.SetHeader("Location", "/pessoas/"+id)
-	// c.JSON(http.StatusCreated, nil)
+	c.SetHeader("Location", "/pessoas/"+id)
+	c.JSON(http.StatusCreated, nil)
 	// // c.JSON(http.StatusCreated, newPerson.ToPerson())
 	return
 }
@@ -93,20 +92,19 @@ func (ctrl *controllers) Find(c httpRouter.Context) {
 	if len(query) == 0 {
 		c.JSON(
 			http.StatusBadRequest,
-			nil,
-			// entities.NewHttpErr(http.StatusBadRequest, "t is required", nil),
+			// nil,
+			entities.NewHttpErr(http.StatusBadRequest, "t is required", nil),
 		)
 		return
 	}
-	c.JSON(http.StatusOK, []entities.Person{})
 
-	// people, err := ctrl.srv.People.FindByText(c.Context(), query)
-	// if err != nil {
-	// 	c.JSON(http.StatusInternalServerError, nil)
-	// 	return
-	// }
+	people, err := ctrl.srv.People.FindByText(c.Context(), query)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
 
-	// c.JSON(http.StatusOK, people)
+	c.JSON(http.StatusOK, people)
 	return
 }
 
@@ -122,21 +120,21 @@ func (ctrl *controllers) Find(c httpRouter.Context) {
 // @Failure 500
 // @Router /pessoas/:id [get]
 func (ctrl *controllers) FindByID(c httpRouter.Context) {
-	c.JSON(http.StatusOK, entities.Person{})
-	// person, err := ctrl.srv.People.FindByID(c.Context(), id)
-	// if err != nil {
-	// 	if errors.Is(err, people.ErrPersonNotFound) {
-	// 		c.JSON(
-	// 			http.StatusNotFound,
-	// 			entities.NewHttpErr(http.StatusBadRequest, err.Error(), nil),
-	// 		)
-	// 		return
-	// 	}
-	// 	c.JSON(http.StatusInternalServerError, nil)
-	// 	return
-	// }
+	person, err := ctrl.srv.People.FindByID(c.Context(), c.GetParam("id"))
+	if err != nil {
+		if errors.Is(err, people.ErrPersonNotFound) {
+			c.JSON(
+				http.StatusNotFound,
+				// nil,
+				entities.NewHttpErr(http.StatusBadRequest, err.Error(), nil),
+			)
+			return
+		}
+		c.JSON(http.StatusInternalServerError, nil)
+		return
+	}
 
-	// c.JSON(http.StatusOK, person)
+	c.JSON(http.StatusOK, person)
 	return
 }
 
